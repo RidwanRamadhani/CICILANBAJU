@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistem Keuangan & Cicilan Penjualan Baju</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            },
+            accent: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .badge-pulse {
+      animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: .6; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+
+  <!-- ================= TOP HEADER NAVIGATION ================= -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Brand Logo & Title -->
+        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+            <i class="fa-solid fa-shirt text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg leading-tight text-slate-900 flex items-center gap-1.5">
+              <span>Keuangan Baju</span>
+              <span class="text-[10px] font-bold uppercase tracking-wider bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full border border-brand-200">Cash & Tempo</span>
+            </h1>
+            <p class="text-xs text-slate-500 hidden sm:block">Pencatatan Penjualan & Tagihan Cicilan Google Drive</p>
+          </div>
+        </div>
+
+        <!-- Sync Indicator & Quick Settings Actions -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          
+          <!-- Tombol Status Login Pemilik Toko / Kunci Akses -->
+          <button id="btnRoleToggle" onclick="toggleOwnerAuthModal()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100">
+            <i id="roleToggleIcon" class="fa-solid fa-lock text-amber-600"></i>
+            <span id="roleToggleText">Masuk Pemilik Toko</span>
+          </button>
+
+          <!-- Cloud Sync Badge & Status Button (Khusus Pemilik Toko) -->
+          <button id="btnSyncStatus" onclick="openSyncModal()" class="owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200">
+            <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+            <span id="syncStatusText" class="hidden md:inline">Belum Terhubung Cloud</span>
+            <i class="fa-brands fa-google-drive text-emerald-600 ml-1"></i>
+          </button>
+
+          <!-- Manual Sync Now Button (Khusus Pemilik Toko) -->
+          <button id="btnManualSync" onclick="manualSync()" title="Sinkronkan Data ke Google Drive" class="owner-only-element p-2 text-slate-600 hover:text-brand-600 hover:bg-brand-50 rounded-lg border border-slate-200 transition">
+            <i id="syncIcon" class="fa-solid fa-rotate"></i>
+          </button>
+
+          <!-- Store Info & Settings Button (Khusus Pemilik Toko) -->
+          <button id="btnSettings" onclick="openSettingsModal()" title="Pengaturan & Backup" class="owner-only-element p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 transition">
+            <i class="fa-solid fa-gear"></i>
+          </button>
+
+          <!-- Action: Tambah Transaksi Cepat (Khusus Pemilik Toko) -->
+          <button id="btnNewTxHeader" onclick="switchTab('new-transaction')" class="owner-only-element hidden sm:flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-brand-600/30 transition">
+            <i class="fa-solid fa-plus"></i>
+            <span>Transaksi Baru</span>
+          </button>
+
+        </div>
+      </div>
+
+      <!-- Desktop Navigation Tabs (Hanya Tampil Jika Pemilik Toko Login) -->
+      <nav id="desktopOwnerNav" class="hidden space-x-1 border-t border-slate-100 py-1">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg text-brand-700 bg-brand-50 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-chart-pie text-brand-600"></i>
+          <span>Dashboard</span>
+        </button>
+        <button onclick="switchTab('installments')" id="tab-installments" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-calendar-check text-slate-500"></i>
+          <span>Manajemen Cicilan</span>
+          <span id="badgeDueCount" class="hidden ml-1 px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-700">0</span>
+        </button>
+        <button onclick="switchTab('new-transaction')" id="tab-new-transaction" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-cart-plus text-slate-500"></i>
+          <span>Input Transaksi</span>
+        </button>
+        <button onclick="switchTab('transactions')" id="tab-transactions" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-receipt text-slate-500"></i>
+          <span>Riwayat Penjualan</span>
+        </button>
+        <button onclick="switchTab('expenses')" id="tab-expenses" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-wallet text-slate-500"></i>
+          <span>Pengeluaran / Modal</span>
+        </button>
+        <button onclick="switchTab('customer-portal')" id="tab-customer-portal" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+          <i class="fa-solid fa-eye text-slate-500"></i>
+          <span>Preview Portal Pembeli</span>
+        </button>
+      </nav>
+
+      <!-- Banner Navigasi Khusus Pembeli -->
+      <div id="customerPortalBanner" class="py-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+        <span class="font-semibold text-slate-700 flex items-center gap-1.5">
+          <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+          <span>Portal Pelanggan (Mode Hanya Lihat / Read-Only)</span>
+        </span>
+        <span class="text-slate-400">Pembeli tidak memiliki akses mengedit tagihan</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 md:pb-10">
+
+    <!-- 1. DASHBOARD VIEW -->
+    <div id="view-dashboard" class="space-y-6">
+      
+      <!-- Greeting & Top Banner -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white p-6 rounded-2xl shadow-lg relative overflow-hidden">
+        <div class="relative z-10 space-y-1">
+          <div class="flex items-center space-x-2 text-xs text-indigo-300 font-medium">
+            <span id="currentDateStr">Selasa, 20 Oktober 2026</span>
+            <span>•</span>
+            <span id="storeNameHeaderDisplay">Toko Busana & Gamis</span>
+          </div>
+          <h2 class="text-2xl font-bold tracking-tight">Ringkasan Posisi Keuangan</h2>
+          <p class="text-slate-300 text-xs sm:text-sm max-w-xl">
+            Pantau arus kas riil, sisa tagihan piutang pelanggan, serta jadwal tempo angsuran mingguan & bulanan secara langsung.
+          </p>
+        </div>
+        <div class="relative z-10 flex flex-wrap gap-2.5">
+          <button onclick="switchTab('new-transaction')" class="bg-brand-500 hover:bg-brand-600 text-white font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition flex items-center space-x-2">
+            <i class="fa-solid fa-plus-circle"></i>
+            <span>Catat Penjualan</span>
+          </button>
+          <button onclick="switchTab('expenses')" class="bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2.5 rounded-xl text-xs sm:text-sm backdrop-blur-sm transition flex items-center space-x-2 border border-white/20">
+            <i class="fa-solid fa-minus-circle"></i>
+            <span>Catat Pengeluaran</span>
+          </button>
+        </div>
+        <!-- Decorative bg pattern -->
+        <div class="absolute -right-6 -bottom-10 opacity-10 text-white pointer-events-none text-9xl">
+          <i class="fa-solid fa-coins"></i>
+        </div>
+      </div>
+
+      <!-- 4 KARTU METRIK UTAMA (PRD Section 2.A) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Card 1: Total Omzet Penjualan -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Total Omzet Penjualan</span>
+            <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i class="fa-solid fa-chart-line text-sm"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h3 id="statTotalOmzet" class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Rp 0</h3>
+            <p class="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+              <span>Semua penjualan Cash + Nilai Cicilan</span>
+            </p>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+            <span>Transaksi Selesai:</span>
+            <span id="statCountTotalSales" class="font-semibold text-slate-800">0 Transaksi</span>
+          </div>
+        </div>
+
+        <!-- Card 2: Total Uang Kas Masuk Riil -->
+        <div class="bg-white p-5 rounded-2xl border border-brand-200/80 shadow-sm hover:shadow-md transition bg-gradient-to-b from-brand-50/30 to-white">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-brand-700">Kas Masuk Riil (Uang Cair)</span>
+            <div class="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center">
+              <i class="fa-solid fa-money-bill-wave text-sm"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h3 id="statTotalKasMasuk" class="text-xl sm:text-2xl font-extrabold text-brand-700 tracking-tight">Rp 0</h3>
+            <p class="text-[11px] text-brand-800/80 mt-1">
+              Cash lunas + DP + Angsuran terbayar
+            </p>
+          </div>
+          <div class="mt-3 pt-3 border-t border-brand-100 flex justify-between text-xs text-slate-500">
+            <span>Total Angsuran Masuk:</span>
+            <span id="statCountPaidInstallments" class="font-semibold text-brand-700">0 Kali Bayar</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Total Sisa Piutang -->
+        <div class="bg-white p-5 rounded-2xl border border-amber-200/80 shadow-sm hover:shadow-md transition bg-gradient-to-b from-amber-50/30 to-white">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Sisa Piutang Berjalan</span>
+            <div class="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center">
+              <i class="fa-solid fa-clock-rotate-left text-sm"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h3 id="statTotalPiutang" class="text-xl sm:text-2xl font-extrabold text-amber-700 tracking-tight">Rp 0</h3>
+            <p class="text-[11px] text-amber-800/80 mt-1">
+              Uang di tangan pelanggan (belum lunas)
+            </p>
+          </div>
+          <div class="mt-3 pt-3 border-t border-amber-100 flex justify-between text-xs text-slate-500">
+            <span>Pelanggan Aktif Mencicil:</span>
+            <span id="statCountActiveDebtors" class="font-semibold text-amber-800">0 Orang</span>
+          </div>
+        </div>
+
+        <!-- Card 4: Pengeluaran & Estimasi Laba Bersih / Kas Bersih -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Kas Bersih (Kas Masuk - Keluar)</span>
+            <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <i class="fa-solid fa-scale-balanced text-sm"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            <h3 id="statKasBersih" class="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">Rp 0</h3>
+            <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+              <span>Pengeluaran: <b id="statTotalPengeluaran" class="text-rose-600">Rp 0</b></span>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between text-xs text-slate-500">
+            <span>Efisiensi Arus Kas:</span>
+            <span id="statProfitStatus" class="font-semibold text-emerald-600">Surplus Kas</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DAFTAR TAGIHAN JATUH TEMPO HARI INI & 7 HARI KE DEPAN (PRD 2.A) -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+              <i class="fa-solid fa-bell text-sm"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <span>Tagihan Jatuh Tempo (Hari Ini & 7 Hari ke Depan)</span>
+                <span id="dueBadgeCountList" class="px-2 py-0.5 text-xs font-bold rounded-full bg-rose-100 text-rose-700">0</span>
+              </h3>
+              <p class="text-xs text-slate-500">Pengingat agar admin segera melakukan penagihan via WhatsApp</p>
+            </div>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="switchTab('installments')" class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 transition">
+              Lihat Semua Cicilan &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Due List Content -->
+        <div id="dueUpcomingList" class="divide-y divide-slate-100 overflow-x-auto">
+          <!-- Rendered by JS -->
+          <div class="p-8 text-center text-slate-400">
+            <i class="fa-regular fa-calendar-check text-3xl mb-2 text-slate-300"></i>
+            <p class="text-sm">Tidak ada tagihan yang jatuh tempo dalam 7 hari ke depan. Semua pembayaran aman!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- QUICK STATS & RECENT ACTIVITY SUMMARY -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Ringkasan Transaksi Terkini -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-slate-500"></i>
+              <span>Transaksi Penjualan Terbaru</span>
+            </h4>
+            <button onclick="switchTab('transactions')" class="text-xs text-brand-600 font-semibold hover:underline">Semua Penjualan</button>
+          </div>
+          <div id="recentTransactionsList" class="divide-y divide-slate-100 text-sm">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+        <!-- Ringkasan Pengeluaran Terkini -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-900 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-arrow-trend-down text-rose-500"></i>
+              <span>Pengeluaran Operasional & Kulakan Terbaru</span>
+            </h4>
+            <button onclick="switchTab('expenses')" class="text-xs text-brand-600 font-semibold hover:underline">Semua Pengeluaran</button>
+          </div>
+          <div id="recentExpensesList" class="divide-y divide-slate-100 text-sm">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 2. FORM INPUT TRANSAKSI BARU (PRD Section 2.B) -->
+    <div id="view-new-transaction" class="hidden max-w-3xl mx-auto space-y-6">
+      
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        <div class="border-b border-slate-100 pb-5 mb-6">
+          <h2 class="text-xl font-bold text-slate-900">Catat Transaksi Penjualan Baru</h2>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">Pilih metode pembayaran Tunai (Cash Lunas) atau Cicilan dengan simulasi otomatis</p>
+        </div>
+
+        <form id="formNewTransaction" onsubmit="handleSaveTransaction(event)" class="space-y-5">
+          
+          <!-- Data Pelanggan -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Nama Pelanggan <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <i class="fa-solid fa-user text-sm"></i>
+                </span>
+                <input type="text" id="txCustomerName" required placeholder="Contoh: Ibu Fatimah" 
+                       class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Nomor WhatsApp Pelanggan <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                  <i class="fa-brands fa-whatsapp text-emerald-600 text-sm"></i>
+                </span>
+                <input type="tel" id="txCustomerPhone" required placeholder="08123456789 atau 628..." 
+                       class="w-full pl-10 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">Format: 08xxx atau 628xxx untuk kirim nota & tagihan WA</p>
+            </div>
+          </div>
+
+          <!-- Keterangan Pembelian -->
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Keterangan Pembelian Barang <span class="text-rose-500">*</span></label>
+            <div class="relative">
+              <textarea id="txItemsDescription" required rows="2" placeholder="Contoh: Baju Gamis Rayon 2 pcs, Hijab Segiempat 1 pcs (Teks Bebas)" 
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition"></textarea>
+            </div>
+          </div>
+
+          <!-- Tanggal & Total Harga -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Tanggal Transaksi <span class="text-rose-500">*</span></label>
+              <input type="date" id="txDate" required 
+                     class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1.5">Total Harga Penjualan <span class="text-rose-500">*</span></label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center font-bold text-slate-500 text-sm">Rp</span>
+                <input type="text" id="txTotalAmount" required placeholder="0" oninput="formatCurrencyInput(this); updateInstallmentSimulation()" 
+                       class="w-full pl-12 pr-3.5 py-2.5 font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition">
+              </div>
+            </div>
+          </div>
+
+          <!-- Pilihan Metode Pembayaran (Cash vs Cicilan) -->
+          <div class="pt-2">
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-2">Metode Pembayaran <span class="text-rose-500">*</span></label>
+            <div class="grid grid-cols-2 gap-3">
+              <label class="relative flex flex-col p-3.5 border-2 rounded-xl cursor-pointer transition border-slate-200 bg-slate-50 hover:bg-slate-100" id="labelMethodCash">
+                <input type="radio" name="paymentType" value="CASH" checked onchange="togglePaymentTypeUI()" class="sr-only">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-money-bill-1-wave text-brand-600"></i>
+                  <span class="font-bold text-sm text-slate-900">CASH (Lunas)</span>
+                </div>
+                <span class="text-xs text-slate-500 mt-1">Pembayaran 100% tunai di muka masuk kas</span>
+              </label>
+
+              <label class="relative flex flex-col p-3.5 border-2 rounded-xl cursor-pointer transition border-slate-200 bg-slate-50 hover:bg-slate-100" id="labelMethodInstallment">
+                <input type="radio" name="paymentType" value="INSTALLMENT" onchange="togglePaymentTypeUI()" class="sr-only">
+                <div class="flex items-center space-x-2">
+                  <i class="fa-solid fa-calendar-days text-indigo-600"></i>
+                  <span class="font-bold text-sm text-slate-900">CICILAN (Tempo)</span>
+                </div>
+                <span class="text-xs text-slate-500 mt-1">Skema angsuran mingguan atau bulanan</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- PENGATURAN CICILAN (Muncul jika pilih Cicilan) -->
+          <div id="installmentConfigSection" class="hidden p-5 rounded-2xl bg-indigo-50/60 border border-indigo-200 space-y-4">
+            <h4 class="font-bold text-indigo-950 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-sliders text-indigo-600"></i>
+              <span>Konfigurasi & Parameter Cicilan</span>
+            </h4>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              
+              <!-- Uang Muka / DP -->
+              <div>
+                <label class="block text-xs font-semibold text-indigo-950 mb-1">Nomor DP / Uang Muka (Opsional)</label>
+                <div class="relative">
+                  <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 text-xs">Rp</span>
+                  <input type="text" id="txDownPayment" placeholder="0" oninput="formatCurrencyInput(this); updateInstallmentSimulation()" 
+                         class="w-full pl-9 pr-3 py-2 bg-white border border-indigo-200 rounded-xl text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <p class="text-[10px] text-indigo-700/80 mt-1">Bisa Rp 0 jika tanpa uang muka</p>
+              </div>
+
+              <!-- Durasi Tenor (Bulan) -->
+              <div>
+                <label class="block text-xs font-semibold text-indigo-950 mb-1">Durasi Tenor (Bulan)</label>
+                <select id="txTenorMonths" onchange="updateInstallmentSimulation()" 
+                        class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="1">1 Bulan</option>
+                  <option value="2" selected>2 Bulan</option>
+                  <option value="3">3 Bulan</option>
+                  <option value="4">4 Bulan</option>
+                  <option value="5">5 Bulan</option>
+                  <option value="6">6 Bulan</option>
+                  <option value="9">9 Bulan</option>
+                  <option value="12">12 Bulan (1 Tahun)</option>
+                </select>
+              </div>
+
+              <!-- Frekuensi Bayar -->
+              <div>
+                <label class="block text-xs font-semibold text-indigo-950 mb-1">Frekuensi Bayar</label>
+                <select id="txFrequency" onchange="updateInstallmentSimulation()" 
+                        class="w-full px-3 py-2 bg-white border border-indigo-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                  <option value="WEEKLY" selected>1x per Minggu (Tempo +7 Hari)</option>
+                  <option value="MONTHLY">1x per Bulan (Tempo +1 Bulan)</option>
+                </select>
+                <p class="text-[10px] text-indigo-700/80 mt-1" id="frequencyExplanation">1 Bulan = 4x Angsuran mingguan</p>
+              </div>
+
+            </div>
+
+            <!-- PRATINJAU JADWAL CICILAN (PRD 2.B) -->
+            <div class="mt-4 pt-3 border-t border-indigo-200/80">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-900">Pratinjau Simulasi Jadwal Cicilan</span>
+                <span id="simSummaryBadge" class="text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-200 text-indigo-900">8x Bayar @ Rp 0</span>
+              </div>
+              
+              <!-- Simulasi Cards / Table -->
+              <div class="bg-white rounded-xl border border-indigo-100 overflow-hidden shadow-inner max-h-56 overflow-y-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-indigo-50/80 text-indigo-900 border-b border-indigo-100 sticky top-0">
+                    <tr>
+                      <th class="py-2 px-3 font-semibold">Ke-</th>
+                      <th class="py-2 px-3 font-semibold">Jatuh Tempo</th>
+                      <th class="py-2 px-3 font-semibold text-right">Nominal Tagihan</th>
+                    </tr>
+                  </thead>
+                  <tbody id="simScheduleTableBody" class="divide-y divide-slate-100">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="grid grid-cols-3 gap-2 mt-2 text-center text-xs">
+                <div class="bg-white p-2 rounded-lg border border-indigo-100">
+                  <span class="text-slate-500 block text-[10px]">Total Hutang Pokok</span>
+                  <span id="simPrincipal" class="font-bold text-slate-800">Rp 0</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-indigo-100">
+                  <span class="text-slate-500 block text-[10px]">DP Masuk Kas</span>
+                  <span id="simDP" class="font-bold text-brand-600">Rp 0</span>
+                </div>
+                <div class="bg-white p-2 rounded-lg border border-indigo-100">
+                  <span class="text-slate-500 block text-[10px]">Sisa Piutang Awal</span>
+                  <span id="simRemaining" class="font-bold text-amber-700">Rp 0</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex items-center justify-end space-x-3 pt-4 border-t border-slate-100">
+            <button type="button" onclick="switchTab('dashboard')" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 text-sm font-semibold hover:bg-slate-100 transition">
+              Batal
+            </button>
+            <button type="submit" class="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-bold shadow-md shadow-brand-600/30 transition flex items-center space-x-2">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Simpan Transaksi</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+
+    <!-- 3. MANAJEMEN CICILAN & PEMBAYARAN ANGSURAN (PRD Section 2.C) -->
+    <div id="view-installments" class="hidden space-y-6">
+      
+      <!-- Filter & Search Controls -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Daftar Tagihan & Cicilan Pelanggan</h2>
+            <p class="text-xs text-slate-500">Kelola status kelancaran pembayaran, catat angsuran, dan tagih via WhatsApp</p>
+          </div>
+          <button onclick="switchTab('new-transaction')" class="self-start sm:self-auto bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold px-3.5 py-2 rounded-xl transition flex items-center space-x-2">
+            <i class="fa-solid fa-plus"></i>
+            <span>Tambah Cicilan Baru</span>
+          </button>
+        </div>
+
+        <div class="flex flex-col md:flex-row gap-3 pt-2 border-t border-slate-100">
+          <!-- Search box -->
+          <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
+            <input type="text" id="installmentSearch" oninput="renderInstallmentsTable()" placeholder="Cari nama pelanggan, nomor WA, atau nama baju..." 
+                   class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+
+          <!-- Status Filter Tabs (PRD: Semua, Lancar, Jatuh Tempo, Menunggak, Lunas) -->
+          <div class="flex items-center overflow-x-auto space-x-1.5 pb-1 md:pb-0">
+            <button onclick="filterInstallmentStatus('ALL')" class="inst-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 text-white transition" data-status="ALL">Semua</button>
+            <button onclick="filterInstallmentStatus('JATUH_TEMPO')" class="inst-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-amber-700 hover:bg-amber-50 transition" data-status="JATUH_TEMPO">
+              Jatuh Tempo (<span id="countDueBadge">0</span>)
+            </button>
+            <button onclick="filterInstallmentStatus('MENUNGGAK')" class="inst-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-rose-700 hover:bg-rose-50 transition" data-status="MENUNGGAK">
+              Menunggak (<span id="countOverdueBadge">0</span>)
+            </button>
+            <button onclick="filterInstallmentStatus('LANCAR')" class="inst-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-emerald-700 hover:bg-emerald-50 transition" data-status="LANCAR">Lancar</button>
+            <button onclick="filterInstallmentStatus('LUNAS')" class="inst-filter-btn px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-status="LUNAS">Lunas</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Installments List Cards / Table -->
+      <div id="installmentsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+
+    <!-- 4. RIWAYAT TRANSAKSI PENJUALAN (Semua Cash & Cicilan) -->
+    <div id="view-transactions" class="hidden space-y-6">
+      
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Riwayat Seluruh Transaksi Penjualan</h2>
+            <p class="text-xs text-slate-500">Daftar transaksi Cash dan Cicilan beserta cetak nota dan rincian</p>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="exportToCSV()" class="px-3 py-1.5 text-xs font-semibold rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center space-x-1.5">
+              <i class="fa-solid fa-file-excel text-emerald-600"></i>
+              <span>Ekspor CSV</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-100">
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">
+              <i class="fa-solid fa-magnifying-glass text-xs"></i>
+            </span>
+            <input type="text" id="searchTransactionHistory" oninput="renderTransactionHistory()" placeholder="Cari nama / barang / nomor nota..." 
+                   class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <div>
+            <select id="filterTransactionType" onchange="renderTransactionHistory()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="ALL">Semua Jenis Pembayaran</option>
+              <option value="CASH">Hanya CASH (Lunas)</option>
+              <option value="INSTALLMENT">Hanya CICILAN (Tempo)</option>
+            </select>
+          </div>
+          <div>
+            <select id="filterTransactionSort" onchange="renderTransactionHistory()" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+              <option value="NEWEST">Terbaru ke Terlama</option>
+              <option value="OLDEST">Terlama ke Terbaru</option>
+              <option value="HIGHEST">Nominal Terbesar</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200 mt-2">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Tanggal & ID</th>
+                <th class="py-3 px-4">Pelanggan</th>
+                <th class="py-3 px-4">Keterangan Barang</th>
+                <th class="py-3 px-4">Metode Bayar</th>
+                <th class="py-3 px-4 text-right">Total Transaksi</th>
+                <th class="py-3 px-4 text-right">Kas Diterima</th>
+                <th class="py-3 px-4 text-center">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="transactionHistoryTableBody" class="divide-y divide-slate-100">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 5. PENCATATAN PENGELUARAN SEDERHANA (PRD Section 2.D) -->
+    <div id="view-expenses" class="hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Form Tambah Pengeluaran -->
+        <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-rose-500"></i>
+              <span>Catat Pengeluaran Baru</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-1">Kulakan stok gamis/baju, ongkir, packing plastik, dll</p>
+          </div>
+
+          <form id="formExpense" onsubmit="handleSaveExpense(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tanggal</label>
+              <input type="date" id="expDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Kategori Pengeluaran</label>
+              <select id="expCategory" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                <option value="KULAKAN">Kulakan Stok Baju / Modal</option>
+                <option value="ONGKIR">Ongkos Kirim / Ekspedisi</option>
+                <option value="PACKAGING">Plastik Packing & Label</option>
+                <option value="OPERASIONAL">Operasional (Pulsa/Bensin/Makan)</option>
+                <option value="LAINNYA">Lain-lain</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nominal Biaya (Rp)</label>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 text-sm">Rp</span>
+                <input type="text" id="expAmount" required placeholder="0" oninput="formatCurrencyInput(this)" 
+                       class="w-full pl-10 pr-3 py-2 font-bold text-rose-600 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Keterangan / Catatan</label>
+              <textarea id="expDescription" required rows="2" placeholder="Contoh: Kulakan 1 kodi gamis ceruty di Pasar Tanah Abang" 
+                        class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm rounded-xl shadow-md shadow-rose-600/30 transition flex items-center justify-center space-x-2">
+              <i class="fa-solid fa-floppy-disk"></i>
+              <span>Simpan Pengeluaran</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Daftar Pengeluaran & Ringkasan -->
+        <div class="lg:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base">Riwayat Biaya & Pengeluaran</h3>
+              <p class="text-xs text-slate-500">Mempengaruhi langsung perhitungan kas bersih Anda</p>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-500 block">Total Pengeluaran:</span>
+              <span id="expenseTotalSum" class="text-base font-extrabold text-rose-600">Rp 0</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-slate-200">
+            <table class="w-full text-left text-xs sm:text-sm">
+              <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">Tanggal</th>
+                  <th class="py-2.5 px-3">Kategori</th>
+                  <th class="py-2.5 px-3">Keterangan</th>
+                  <th class="py-2.5 px-3 text-right">Nominal</th>
+                  <th class="py-2.5 px-3 text-center">Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="expenseTableBody" class="divide-y divide-slate-100">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- 6. PORTAL CEK TAGIHAN KHUSUS PELANGGAN (100% READ ONLY / AMAN) -->
+    <div id="view-customer-portal" class="max-w-3xl mx-auto space-y-6">
+      
+      <!-- Welcome Hero Card Pelanggan -->
+      <div class="bg-gradient-to-br from-indigo-900 via-slate-900 to-emerald-950 text-white p-6 sm:p-8 rounded-3xl shadow-xl relative overflow-hidden">
+        <div class="relative z-10 space-y-2">
+          <div class="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md px-3 py-1 rounded-full text-xs text-emerald-300 font-semibold border border-white/10">
+            <i class="fa-solid fa-lock text-emerald-400"></i>
+            <span>Portal Informasi Pembeli Resmi</span>
+          </div>
+          <h2 class="text-xl sm:text-2xl font-bold tracking-tight">Cek Rincian Tagihan & Cicilan Baju Anda</h2>
+          <p class="text-xs sm:text-sm text-slate-300 max-w-lg">
+            Pantau jadwal jatuh tempo angsuran mingguan / bulanan, riwayat pembayaran yang sudah diverifikasi toko, serta nomor rekening transfer resmi.
+          </p>
+        </div>
+        <div class="absolute -right-4 -bottom-6 opacity-10 text-white pointer-events-none text-9xl">
+          <i class="fa-solid fa-receipt"></i>
+        </div>
+      </div>
+
+      <!-- Search Box Tagihan Pelanggan -->
+      <div class="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-700">
+          Masukkan Nomor WhatsApp Anda atau No. Nota:
+        </label>
+        <div class="flex flex-col sm:flex-row gap-2.5">
+          <div class="relative flex-1">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+              <i class="fa-solid fa-phone text-xs"></i>
+            </span>
+            <input type="text" id="customerSearchQuery" placeholder="Contoh: 08123456789 atau TX-001..." 
+                   class="w-full pl-10 pr-3 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <button onclick="handleCustomerLookup()" class="px-6 py-3 bg-brand-600 hover:bg-brand-700 text-white font-bold text-sm rounded-xl shadow-md shadow-brand-600/30 transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span>Periksa Tagihan</span>
+          </button>
+        </div>
+        <p class="text-[11px] text-slate-400">
+          💡 Masukkan nomor handphone yang Anda gunakan saat bertransaksi di toko kami.
+        </p>
+      </div>
+
+      <!-- Customer Lookup Result Container -->
+      <div id="customerLookupResults" class="space-y-4">
+        <!-- Rendered by JS -->
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ================= MOBILE BOTTOM NAVIGATION (KHUSUS PEMILIK TOKO) ================= -->
+  <div id="mobileOwnerNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg px-2 py-1.5 flex justify-around">
+    <button onclick="switchTab('dashboard')" id="mob-dashboard" class="mobile-nav-btn flex flex-col items-center py-1 px-2 text-brand-600 text-[10px] font-bold">
+      <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
+      <span>Beranda</span>
+    </button>
+    <button onclick="switchTab('installments')" id="mob-installments" class="mobile-nav-btn flex flex-col items-center py-1 px-2 text-slate-500 text-[10px] font-medium relative">
+      <i class="fa-solid fa-calendar-check text-base mb-0.5"></i>
+      <span>Cicilan</span>
+      <span id="mobBadgeDueCount" class="hidden absolute top-0.5 right-1.5 w-2 h-2 rounded-full bg-rose-500"></span>
+    </button>
+    <button onclick="switchTab('new-transaction')" id="mob-new-transaction" class="mobile-nav-btn flex flex-col items-center py-1 px-3 text-white bg-brand-600 rounded-xl text-[10px] font-bold shadow-md shadow-brand-600/30 -mt-2">
+      <i class="fa-solid fa-plus text-base mb-0.5"></i>
+      <span>Catat</span>
+    </button>
+    <button onclick="switchTab('transactions')" id="mob-transactions" class="mobile-nav-btn flex flex-col items-center py-1 px-2 text-slate-500 text-[10px] font-medium">
+      <i class="fa-solid fa-receipt text-base mb-0.5"></i>
+      <span>Penjualan</span>
+    </button>
+    <button onclick="switchTab('expenses')" id="mob-expenses" class="mobile-nav-btn flex flex-col items-center py-1 px-2 text-slate-500 text-[10px] font-medium">
+      <i class="fa-solid fa-wallet text-base mb-0.5"></i>
+      <span>Biaya</span>
+    </button>
+  </div>
+  </div>
+
+  <!-- ================= MODALS & POPUPS ================= -->
+
+  <!-- MODAL 1: DETAIL CICILAN & JADWAL ANGSURAN PER PELANGGAN (PRD 2.C) -->
+  <div id="modalInstallmentDetail" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Modal Header -->
+      <div class="p-5 sm:p-6 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span id="modalCustomerName" class="text-lg font-bold">Ibu Fatimah</span>
+            <span id="modalCustomerStatusBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">LANCAR</span>
+          </div>
+          <p id="modalCustomerPhone" class="text-xs text-slate-400 mt-0.5">08123456789</p>
+        </div>
+        <button onclick="closeModal('modalInstallmentDetail')" class="text-slate-400 hover:text-white p-2 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-5 sm:p-6 overflow-y-auto space-y-5 flex-1">
+        
+        <!-- Info Barang & Summary -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 space-y-2">
+          <div class="text-xs text-slate-500">Barang yang dibeli:</div>
+          <div id="modalItemDesc" class="text-sm font-semibold text-slate-800">2 Pcs Baju Gamis</div>
+          
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-slate-200 text-xs">
+            <div>
+              <span class="text-slate-400 block text-[10px]">Total Belanja</span>
+              <span id="modalTotalAmount" class="font-bold text-slate-800">Rp 0</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Uang Muka (DP)</span>
+              <span id="modalDP" class="font-bold text-brand-600">Rp 0</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Sudah Dibayar</span>
+              <span id="modalTotalPaid" class="font-bold text-blue-600">Rp 0</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[10px]">Sisa Hutang</span>
+              <span id="modalRemainingDebt" class="font-extrabold text-rose-600">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Quick Buttons -->
+        <div class="flex flex-wrap gap-2.5">
+          <button id="modalBtnWhatsApp" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs py-2.5 px-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+            <i class="fa-brands fa-whatsapp text-sm"></i>
+            <span>Tagih via WhatsApp</span>
+          </button>
+          <button id="modalBtnManualPay" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-xs py-2.5 px-3 rounded-xl shadow-sm transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-hand-holding-dollar text-sm"></i>
+            <span>Catat Bayar Angsuran</span>
+          </button>
+        </div>
+
+        <!-- Tabel Jadwal Angsuran Ke-1 s/d Selesai (PRD 2.C) -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider">Tabel Rincian Jadwal Angsuran</h4>
+            <span id="modalProgressText" class="text-xs text-slate-500 font-medium">3 dari 8 Terbayar</span>
+          </div>
+
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
+                <tr>
+                  <th class="py-2.5 px-3">Ke</th>
+                  <th class="py-2.5 px-3">Jatuh Tempo</th>
+                  <th class="py-2.5 px-3 text-right">Tagihan</th>
+                  <th class="py-2.5 px-3 text-right">Terbayar</th>
+                  <th class="py-2.5 px-3 text-center">Status</th>
+                  <th class="py-2.5 px-3 text-center">Aksi Cepat</th>
+                </tr>
+              </thead>
+              <tbody id="modalScheduleTableBody" class="divide-y divide-slate-100">
+                <!-- Rendered by JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Riwayat Pembayaran Masuk -->
+        <div>
+          <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider mb-2">Log Riwayat Pembayaran Masuk</h4>
+          <div id="modalPaymentHistoryLogs" class="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button onclick="closeModal('modalInstallmentDetail')" class="px-5 py-2 bg-slate-200 hover:bg-slate-300 font-semibold text-slate-700 text-xs rounded-xl transition">
+          Tutup
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 2: FORM INPUT BAYAR ANGSURAN (PRD 2.C: Bayar jadwal / manual / parsial / rapel) -->
+  <div id="modalPayInstallment" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div class="p-5 bg-brand-700 text-white flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-base">Pencatatan Pembayaran Angsuran</h3>
+          <p id="payModalCustomerName" class="text-xs text-brand-200">Pelanggan: Ibu Fatimah</p>
+        </div>
+        <button onclick="closeModal('modalPayInstallment')" class="text-brand-200 hover:text-white p-1 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formPaymentRecord" onsubmit="handleExecutePayment(event)" class="p-5 space-y-4">
+        <input type="hidden" id="payTxId">
+        <input type="hidden" id="payInstallmentNo">
+
+        <div class="p-3 bg-brand-50 border border-brand-200 rounded-xl text-xs space-y-1">
+          <div class="flex justify-between">
+            <span class="text-slate-600">Sisa Total Hutang:</span>
+            <span id="payModalRemainingDebt" class="font-bold text-rose-600">Rp 0</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-600">Standar Cicilan per Periode:</span>
+            <span id="payModalStandardAmount" class="font-bold text-slate-800">Rp 0</span>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Tanggal Terima Uang</label>
+          <input type="date" id="payDate" required class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">
+            Nominal yang Dibayarkan Pelanggan (Rp) <span class="text-rose-500">*</span>
+          </label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center font-bold text-slate-400 text-sm">Rp</span>
+            <input type="text" id="payAmount" required placeholder="0" oninput="formatCurrencyInput(this)" 
+                   class="w-full pl-10 pr-3 py-2.5 font-bold text-slate-900 bg-slate-50 border border-slate-300 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-brand-500">
+          </div>
+          <p class="text-[11px] text-slate-500 mt-1">
+            Bisa bayar kurang/sebagian, pas, atau bayar rapel beberapa minggu sekaligus. Sistem otomatis mengalokasikan dan memotong hutang.
+          </p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Catatan / Metode (Opsional)</label>
+          <input type="text" id="payNotes" placeholder="Contoh: Titip tunai / Transfer BCA" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeModal('modalPayInstallment')" class="flex-1 py-2.5 rounded-xl border border-slate-300 font-semibold text-xs text-slate-700 hover:bg-slate-100 transition">
+            Batal
+          </button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 font-bold text-xs text-white shadow-md shadow-brand-600/30 transition flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-check"></i>
+            <span>Simpan Pembayaran</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 3: PENGATURAN SINKRONISASI GOOGLE DRIVE (PRD Section 3) -->
+  <div id="modalGoogleDriveSync" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="p-5 bg-gradient-to-r from-emerald-700 to-teal-800 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-white text-lg">
+            <i class="fa-brands fa-google-drive"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Sinkronisasi Google Drive</h3>
+            <p class="text-xs text-emerald-100">Database Cloud Gratis Pribadi Anda</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalGoogleDriveSync')" class="text-emerald-200 hover:text-white p-1 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs sm:text-sm">
+        
+        <!-- Info Banner -->
+        <div class="bg-emerald-50 border border-emerald-200 p-3.5 rounded-2xl text-emerald-900 text-xs leading-relaxed space-y-1">
+          <p class="font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-600"></i>
+            <span>Keamanan & Privasi 100% Milik Anda</span>
+          </p>
+          <p class="text-emerald-800/90">
+            Data tersimpan di file <code>database_keuangan.json</code> di Google Drive Anda melalui Google Apps Script. Tidak ada biaya server!
+          </p>
+        </div>
+
+        <!-- Input Web App URL -->
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-700 mb-1">
+            Google Apps Script Web App URL <span class="text-rose-500">*</span>
+          </label>
+          <input type="url" id="inputGasUrl" placeholder="https://script.google.com/macros/s/AKfycb.../exec" 
+                 class="w-full px-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          <p class="text-[11px] text-slate-500 mt-1">
+            Didapat setelah Anda melakukan <i>Deploy as Web App</i> di Google Apps Script (lihat file <code>PANDUAN_SETUP_GOOGLE_DRIVE.md</code>).
+          </p>
+        </div>
+
+        <!-- Auto Sync Toggle -->
+        <div class="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+          <div>
+            <span class="font-bold text-slate-800 text-xs block">Auto-Sync Otomatis</span>
+            <span class="text-[11px] text-slate-500">Otomatis simpan ke Google Drive di latar belakang setiap ada transaksi</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="checkAutoSync" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+          </label>
+        </div>
+
+        <!-- Sync Actions Buttons (Simpan & Muat) -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button type="button" onclick="pushToGoogleDrive()" class="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 font-bold text-xs text-white transition flex items-center justify-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <span>Simpan ke Drive</span>
+          </button>
+          <button type="button" onclick="pullFromGoogleDrive()" class="py-2.5 px-3 rounded-xl bg-slate-700 hover:bg-slate-800 font-bold text-xs text-white transition flex items-center justify-center space-x-1.5 shadow-sm">
+            <i class="fa-solid fa-cloud-arrow-down"></i>
+            <span>Muat dari Drive</span>
+          </button>
+        </div>
+
+        <!-- Tombol Link Berbagi Real-time untuk Perangkat / Akun Lain -->
+        <div class="pt-2 border-t border-slate-200">
+          <button type="button" onclick="copyShareableAppLink()" class="w-full py-2.5 px-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-bold text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-share-nodes text-indigo-600"></i>
+            <span>Salin Link Siap Pakai (Untuk HP / Akun Lain)</span>
+          </button>
+          <p class="text-[11px] text-slate-500 mt-1.5 leading-tight">
+            💡 <b>Tips Multi-Perangkat:</b> Buka link tersebut di HP atau akun Google lain untuk langsung terhubung otomatis ke database yang sama tanpa perlu setting ulang!
+          </p>
+        </div>
+
+        <!-- Test Connection Result Status -->
+        <div id="syncTestStatusBox" class="hidden p-3 rounded-xl text-xs"></div>
+
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <button type="button" onclick="testGasConnection()" class="px-3.5 py-2 bg-white border border-slate-300 hover:bg-slate-100 font-semibold text-slate-700 text-xs rounded-xl transition flex items-center space-x-1">
+          <i class="fa-solid fa-wifi"></i>
+          <span>Uji Koneksi URL</span>
+        </button>
+        <button type="button" onclick="saveSyncSettings()" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 font-bold text-white text-xs rounded-xl shadow-md transition">
+          Simpan Pengaturan
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 4: PENGATURAN UMUM, TOKO & BACKUP/RESTORE FILE JSON -->
+  <div id="modalGeneralSettings" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-lg w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <i class="fa-solid fa-gear text-indigo-400"></i>
+          <h3 class="font-bold text-base">Pengaturan Aplikasi & Backup Data</h3>
+        </div>
+        <button onclick="closeModal('modalGeneralSettings')" class="text-slate-400 hover:text-white p-1 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-5 overflow-y-auto flex-1 text-xs sm:text-sm">
+        
+        <!-- Informasi Toko (Untuk Template Tagihan WhatsApp) -->
+        <div class="space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Identitas Toko & Rekening Pembayaran</h4>
+          <p class="text-[11px] text-slate-500">Info ini otomatis disematkan pada pesan tagihan WhatsApp dan cetak nota.</p>
+          
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Toko / Usaha</label>
+            <input type="text" id="settingStoreName" placeholder="Contoh: Butik Berkah Fashion" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Pemilik / Admin</label>
+            <input type="text" id="settingOwnerName" placeholder="Contoh: Ibu Hj. Maryam" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Rekening Bank & E-Wallet untuk Penagihan</label>
+            <textarea id="settingRekening" rows="2" placeholder="Contoh: BCA 1234567890 a.n Maryam / DANA 08123456789" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">PIN Keamanan Pemilik Toko (Untuk Mengunci Edit)</label>
+            <input type="password" id="settingOwnerPin" maxlength="8" placeholder="Contoh: 1234 (Default)" class="w-full px-3 py-2 bg-slate-50 border border-slate-300 rounded-xl text-sm font-mono tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            <p class="text-[10px] text-slate-400 mt-0.5">PIN ini digunakan agar pembeli tidak bisa mengedit atau melihat keuangan rahasia toko.</p>
+          </div>
+        </div>
+
+        <!-- Backup & Restore File Manual JSON (PRD 3.4) -->
+        <div class="pt-4 border-t border-slate-200 space-y-3">
+          <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Cadangan File Manual (.JSON)</h4>
+          <p class="text-[11px] text-slate-500">Simpan salinan database ke file offline di laptop/HP Anda.</p>
+
+          <div class="grid grid-cols-2 gap-2">
+            <button onclick="downloadJsonBackup()" class="py-2.5 px-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+              <i class="fa-solid fa-download"></i>
+              <span>Backup File (.json)</span>
+            </button>
+
+            <label class="py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl font-bold text-xs flex items-center justify-center space-x-1.5 cursor-pointer transition">
+              <i class="fa-solid fa-upload"></i>
+              <span>Restore File (.json)</span>
+              <input type="file" id="inputRestoreJson" accept=".json" onchange="handleRestoreJson(event)" class="sr-only">
+            </label>
+          </div>
+        </div>
+
+        <!-- Demo Data & Reset Data -->
+        <div class="pt-4 border-t border-slate-200 space-y-2">
+          <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider">Data Contoh / Reset</h4>
+          <div class="flex items-center space-x-2">
+            <button onclick="loadSampleDemoData()" class="flex-1 py-2 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-semibold text-xs transition">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Isi Data Contoh Demo
+            </button>
+            <button onclick="confirmResetAllData()" class="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 rounded-xl font-semibold text-xs transition">
+              <i class="fa-solid fa-trash mr-1"></i> Reset Data
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+        <button onclick="saveGeneralSettings()" class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 font-bold text-white text-xs rounded-xl shadow-md transition">
+          Simpan Perubahan
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 5: CETAK / NOTA DIGITAL PENJUALAN -->
+  <div id="modalPrintReceipt" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <!-- Receipt Preview Card -->
+      <div id="printableReceiptArea" class="p-6 bg-white font-mono text-xs text-slate-800 space-y-3 border-b border-dashed border-slate-300">
+        <div class="text-center space-y-0.5">
+          <h3 id="rcpStoreName" class="font-bold text-sm tracking-wider uppercase">TOKO BAJU BERKAH</h3>
+          <p id="rcpStoreInfo" class="text-[10px] text-slate-500">Pusat Busana & Gamis Berkualitas</p>
+          <div class="border-b border-slate-300 my-2"></div>
+        </div>
+
+        <div class="space-y-1 text-[11px]">
+          <div class="flex justify-between">
+            <span class="text-slate-500">No. Nota:</span>
+            <span id="rcpId" class="font-bold">TX-001</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Tanggal:</span>
+            <span id="rcpDate">2026-10-20</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Pelanggan:</span>
+            <span id="rcpCustomer" class="font-semibold">Ibu Fatimah</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-slate-500">Pembayaran:</span>
+            <span id="rcpMethod" class="font-bold text-brand-700">CASH / LUNAS</span>
+          </div>
+        </div>
+
+        <div class="border-b border-dashed border-slate-300 py-1"></div>
+
+        <div>
+          <div class="font-semibold text-slate-700">Rincian Barang:</div>
+          <div id="rcpItems" class="text-slate-600 mt-0.5">2 Pcs Baju Gamis</div>
+        </div>
+
+        <div class="border-b border-dashed border-slate-300 py-1"></div>
+
+        <div class="space-y-1 text-[11px]">
+          <div class="flex justify-between">
+            <span>Total Transaksi:</span>
+            <span id="rcpTotal" class="font-bold">Rp 0</span>
+          </div>
+          <div class="flex justify-between" id="rcpRowPaid">
+            <span>Uang Diterima:</span>
+            <span id="rcpPaid" class="font-bold text-brand-700">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-rose-600 font-bold" id="rcpRowDebt">
+            <span>Sisa Hutang:</span>
+            <span id="rcpRemaining">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="border-b border-slate-300 my-2"></div>
+
+        <div class="text-center text-[10px] text-slate-400 space-y-0.5">
+          <p>Terima kasih atas kunjungan Anda!</p>
+          <p id="rcpRekeningInfo">Transfer: BCA 1234567890</p>
+        </div>
+      </div>
+
+      <!-- Action Footer -->
+      <div class="p-4 bg-slate-50 flex items-center justify-between space-x-2">
+        <button onclick="closeModal('modalPrintReceipt')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 font-semibold text-slate-700 text-xs rounded-xl transition">
+          Tutup
+        </button>
+        <button onclick="window.print()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 font-bold text-white text-xs rounded-xl shadow-md transition flex items-center space-x-1.5">
+          <i class="fa-solid fa-print"></i>
+          <span>Cetak Nota</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL 6: LOGIN / BUKA KUNCI PEMILIK TOKO -->
+  <div id="modalOwnerLogin" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-sm w-full shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      
+      <div class="p-5 bg-gradient-to-r from-amber-600 to-amber-700 text-white flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
+            <i class="fa-solid fa-key text-white"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base">Masuk Pemilik Toko</h3>
+            <p class="text-[11px] text-amber-100">Buka akses edit, pembayaran, & keuangan</p>
+          </div>
+        </div>
+        <button onclick="closeModal('modalOwnerLogin')" class="text-amber-200 hover:text-white p-1 text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <form id="formOwnerLogin" onsubmit="handleOwnerLoginSubmit(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase text-slate-700 mb-2 text-center">
+            Masukkan PIN Keamanan Toko
+          </label>
+          <div class="relative max-w-[200px] mx-auto">
+            <input type="password" id="inputOwnerPin" maxlength="8" required autofocus placeholder="••••" 
+                   class="w-full text-center py-3 bg-slate-100 border-2 border-slate-300 rounded-2xl text-xl font-mono tracking-widest text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition">
+          </div>
+          <p class="text-[11px] text-slate-400 text-center mt-2">
+            PIN Bawaan (Default): <b class="text-slate-600">1234</b>
+          </p>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button type="button" onclick="closeModal('modalOwnerLogin')" class="flex-1 py-2.5 rounded-xl border border-slate-300 font-semibold text-xs text-slate-700 hover:bg-slate-100 transition">
+            Batal
+          </button>
+          <button type="submit" class="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 font-bold text-xs text-white shadow-md shadow-amber-600/30 transition flex items-center justify-center space-x-1.5">
+            <i class="fa-solid fa-unlock"></i>
+            <span>Buka Akses</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- JAVASCRIPT APPLICATION LOGIC -->
+  <script src="app.js"></script>
+</body>
+</html>

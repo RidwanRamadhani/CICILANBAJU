@@ -1,0 +1,47 @@
+Bertindaklah sebagai Senior Full-Stack Developer dan System Architect. Buatkan aplikasi web lengkap beserta dokumen PRD dan panduan instalasinya untuk "Aplikasi Web Pencatatan Keuangan Penjualan & Manajemen Cicilan (Cash & Cicilan)" yang menyimpan databasenya di Google Drive.
+
+1. RINGKASAN SISTEM
+- Aplikasi ini khusus untuk pencatatan keuangan internal (BUKAN toko online/e-commerce dan TIDAK perlu katalog produk baju).
+- Menggunakan arsitektur Frontend Web + Penyimpanan Cloud di Google Drive milik pengguna melalui jembatan Google Apps Script (Web App API) yang dikombinasikan dengan LocalStorage untuk kecepatan akses.
+
+2. FITUR UTAMA APLIKASI
+A. Dashboard Ringkasan Keuangan:
+- Menampilkan 4 kartu metrik utama: 
+  1. Total Omzet Penjualan (Cash + Total Piutang Cicilan).
+  2. Total Uang Kas Masuk Riil (Uang tunai dari transaksi Cash + DP + Angsuran cicilan yang sudah dibayar).
+  3. Total Sisa Piutang (Uang yang masih dicicil dan belum dibayar pelanggan).
+  4. Pengeluaran / Modal & Estimasi Laba Bersih.
+- Daftar "Tagihan Jatuh Tempo Hari Ini & 7 Hari ke Depan" agar admin tidak lupa menagih.
+
+B. Form Input Transaksi Baru (Cash & Cicilan):
+- Input: Nama Pelanggan, Nomor WhatsApp, Keterangan Pembelian (teks bebas, contoh: "Baju Gamis 2 pcs"), Tanggal Transaksi, dan Total Harga.
+- Pilihan Metode Bayar:
+  1. CASH (Lunas): Otomatis masuk ke kas lunas 100%.
+  2. CICILAN: Membuka pengaturan cicilan:
+     - Nominal Uang Muka / DP (opsional, bisa Rp 0).
+     - Pilihan Durasi Tenor: 1 Bulan sampai 12 Bulan.
+     - Pilihan Frekuensi Bayar:
+       a. "1x per Minggu" (Tenor bulan otomatis dikalikan 4 minggu. Contoh: 2 bulan = 8x bayar mingguan, jatuh tempo otomatis setiap +7 hari).
+       b. "1x per Bulan" (Sesuai jumlah bulan, jatuh tempo otomatis setiap +1 bulan).
+     - Pratinjau Jadwal Cicilan: Menampilkan simulasi nominal angsuran per minggu/bulan dan daftar tanggal jatuh temponya sebelum disimpan.
+
+C. Manajemen Cicilan & Pembayaran Angsuran:
+- Daftar pelanggan yang sedang mencicil dengan filter status (Semua, Lancar, Jatuh Tempo, Menunggak, Lunas).
+- Detail Rincian Cicilan per Pelanggan: Menampilkan tabel angsuran ke-1 hingga selesai.
+- Fitur "Bayar Cicilan": Bisa klik bayar sesuai jadwal, atau input nominal manual (mendukung bayar sebagian/kurang atau bayar rapel beberapa minggu sekaligus) yang otomatis memotong sisa hutang.
+- Tombol "Tagih via WhatsApp": Membuka link wa.me ke nomor pelanggan dengan teks pengingat tagihan otomatis berisi nominal cicilan minggu/bulan ini dan sisa total cicilan.
+
+D. Pencatatan Pengeluaran Sederhana:
+- Form catat uang keluar (misal: kulakan barang, ongkir, operasional) untuk menghitung kas bersih.
+
+3. ARSITEKTUR DATABASE GOOGLE DRIVE (WAJIB DITERAPKAN)
+- Buat sistem penyimpanan Hybrid (LocalStorage + Google Drive Cloud Sync):
+  1. Sediakan file kode `Code.gs` (Google Apps Script) yang berfungsi menyimpan dan membaca seluruh data aplikasi dalam bentuk file `database_keuangan.json` (atau otomatis mengekspor ke Google Sheets) di dalam folder Google Drive pengguna.
+  2. Di dalam aplikasi web, buat menu "Pengaturan Sinkronisasi Google Drive" tempat pengguna cukup menempelkan "Web App URL" dari Google Apps Script.
+  3. Setiap kali ada penambahan transaksi atau pembayaran cicilan, data tersimpan instan di perangkat dan otomatis melakukan sinkronisasi (Auto-Sync) ke Google Drive di latar belakang, disertai tombol manual "Simpan ke Google Drive" dan "Muat dari Google Drive".
+  4. Sediakan juga tombol "Backup File (.json)" dan "Restore File" secara manual.
+
+4. OUTPUT YANG DIMINTA
+1. Dokumen PRD ringkas & skema struktur data JSON.
+2. Kode Frontend lengkap (HTML, Tailwind CSS, JavaScript modern) dengan desain antarmuka (UI) yang bersih, responsif di HP dan Laptop, serta mudah digunakan.
+3. Kode `Code.gs` untuk dipasang di Google Drive / Google Apps Script beserta panduan langkah demi langkah cara deploy-nya (hanya dalam 5 langkah mudah untuk pemula).
