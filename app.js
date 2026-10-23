@@ -1,10 +1,22 @@
 /**
  * ============================================================================
  * SISTEM KEUANGAN & MANAJEMEN CICILAN PENJUALAN BAJU (CASH & TEMPO)
- * Database Cloud: Google Drive (via Google Apps Script Web App API)
+ * Database Cloud: Google Firebase Realtime Database (WebSocket Sub-Detik)
  * Storage Lokal: Browser LocalStorage (Fast & Offline-Ready)
  * ============================================================================
  */
+
+// KONFIGURASI FIREBASE REALTIME PERMANEN (HARDCODED)
+const PERMANENT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAcYyIWCKuaay_sPXIhCJmuMdQ7w1DiYSc",
+  authDomain: "cicilan-baju.firebaseapp.com",
+  databaseURL: "https://cicilan-baju-default-rtdb.firebaseio.com",
+  projectId: "cicilan-baju",
+  storageBucket: "cicilan-baju.firebasestorage.app",
+  messagingSenderId: "550831292591",
+  appId: "1:550831292591:web:4646e54d1ba2696a45145a",
+  measurementId: "G-RYNWEJ1JHL"
+};
 
 // STORAGE KEY CONSTANT
 const STORAGE_KEY = "cicilan_baju_database_v1";
@@ -14,13 +26,12 @@ const defaultDatabase = {
   version: "1.0.0",
   lastUpdated: new Date().toISOString(),
   storeInfo: {
-    name: "Toko Busana & Butik Berkah",
+    name: "SADIL OLSHOP",
     owner: "Admin Toko",
-    phone: "081234567890",
-    rekening: "BCA 1234567890 a.n Butik Berkah / DANA 081234567890"
+    phone: "0895-1361-4415",
+    rekening: "BCA 1234567890 a.n SADIL OLSHOP / DANA 0895-1361-4415"
   },
   settings: {
-    gasUrl: "",
     autoSync: true,
     lastSyncTime: null,
     ownerPin: "1234"
@@ -29,20 +40,41 @@ const defaultDatabase = {
   expenses: []
 };
 
+// Helper sanitasi nomor HP untuk WhatsApp (konversi otomatis 08... atau 8... menjadi format standar Indonesia 628...)
+function formatWaPhoneNumber(phone) {
+  if (!phone) return "";
+  let clean = phone.toString().replace(/[^\d]/g, '');
+  if (clean.startsWith('0')) {
+    clean = '62' + clean.slice(1);
+  } else if (clean.startsWith('8')) {
+    clean = '62' + clean;
+  } else if (!clean.startsWith('62')) {
+    clean = '62' + clean;
+  }
+  return clean;
+}
+
 // RUNTIME STATE
 let db = null;
 let currentInstallmentFilter = "ALL";
 let isSyncing = false;
 let autoSyncTimeout = null;
-let livePollingInterval = null;
 let isOwnerLoggedIn = false;
+
+// FIREBASE REALTIME STATE
+let firebaseApp = null;
+let firebaseDb = null;
+let isFirebaseConnected = false;
+let isRemoteUpdate = false; // Mencegah looping saat menerima data dari websocket
 
 // ================= INITIALIZATION =================
 document.addEventListener("DOMContentLoaded", async () => {
   loadDatabaseFromLocal();
-  checkUrlParamsForGasUrl();
   initDefaultDateInputs();
   updateStoreHeaderDisplay();
+
+  // 1. Inisialisasi Firebase Realtime Database otomatis saat halaman dimuat (Hardcoded)
+  initFirebase(PERMANENT_FIREBASE_CONFIG);
   updateSyncUIStatus();
 
   // CEK APAKAH ADA PERMINTAAN CEK NOTA KHUSUS PEMBELI (?cek=TX-xxx)
@@ -70,56 +102,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   refreshAllViews();
-
-  // REAL-TIME AUTO PULL DARI CLOUD SETELAH HALAMAN DIBUKA
-  if (db.settings.gasUrl) {
-    await autoFetchFromCloud();
-    // Refresh lagi jika mode pembeli aktif dan mencari
-    if (cekParam || phoneParam) {
-      handleCustomerLookup(cekParam || phoneParam);
-    }
-  }
-
-  // AKTIFKAN LIVE POLLING OTOMATIS TIAP 12 DETIK
-  startLivePolling();
 });
-
-// Auto-sync saat tab browser aktif kembali (fokus)
-window.addEventListener("focus", () => {
-  if (db && db.settings.gasUrl && !isSyncing) {
-    autoFetchFromCloud(true);
-  }
-});
-
-/**
- * Cek apakah ada parameter ?api= di URL (untuk kemudahan buka di HP / Akun lain)
- */
-function checkUrlParamsForGasUrl() {
-  try {
-    const urlParams = new URLSearchParams(window.location.search);
-    const apiParam = urlParams.get('api');
-    if (apiParam && apiParam.startsWith('http')) {
-      db.settings.gasUrl = apiParam.trim();
-      db.settings.autoSync = true;
-      saveDatabaseToLocal(false);
-      showToast("URL Cloud Google Drive otomatis terpasang dari link!", "info");
-    }
-  } catch (e) {
-    console.warn("Gagal membaca query params:", e);
-  }
-}
-
-/**
- * Live Background Polling agar data sinkron real-time antar perangkat / tab
- */
-function startLivePolling() {
-  if (livePollingInterval) clearInterval(livePollingInterval);
-  livePollingInterval = setInterval(() => {
-    if (db && db.settings.gasUrl && !isSyncing && db.settings.autoSync !== false) {
-      autoFetchFromCloud(true);
-    }
-  }, 12000); // Polling setiap 12 detik
-}
 
 /**
  * Memuat database dari LocalStorage browser
@@ -131,6 +114,9 @@ function loadDatabaseFromLocal() {
       db = JSON.parse(stored);
       // Ensure essential schema properties exist
       if (!db.storeInfo) db.storeInfo = { ...defaultDatabase.storeInfo };
+      if (!db.storeInfo.phone || db.storeInfo.phone === "081234567890") {
+        db.storeInfo.phone = "0895-1361-4415";
+      }
       if (!db.settings) db.settings = { ...defaultDatabase.settings };
       if (!Array.isArray(db.transactions)) db.transactions = [];
       if (!Array.isArray(db.expenses)) db.expenses = [];
@@ -152,8 +138,10 @@ function loadDatabaseFromLocal() {
 function saveDatabaseToLocal(triggerSync = true) {
   db.lastUpdated = new Date().toISOString();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
-  if (triggerSync && db.settings.autoSync && db.settings.gasUrl) {
-    debouncedAutoSync();
+  if (triggerSync && !isRemoteUpdate) {
+    if (firebaseDb) {
+      pushToFirebase(true);
+    }
   }
 }
 
@@ -1292,12 +1280,7 @@ function sendWhatsAppBilling(txId, installmentNo = null) {
   if (!tx || !tx.installmentPlan) return;
 
   const plan = tx.installmentPlan;
-  let cleanPhone = tx.customerPhone.replace(/[^\d]/g, '');
-  if (cleanPhone.startsWith('0')) {
-    cleanPhone = '62' + cleanPhone.slice(1);
-  } else if (!cleanPhone.startsWith('62')) {
-    cleanPhone = '62' + cleanPhone;
-  }
+  let cleanPhone = formatWaPhoneNumber(tx.customerPhone);
 
   // Tentukan info tagihan yang relevan
   let targetSchedule = null;
@@ -1580,278 +1563,229 @@ function confirmDeleteExpense(expId) {
   }
 }
 
-// ================= GOOGLE DRIVE & GOOGLE APPS SCRIPT SYNC (PRD Section 3) =================
+// ================= FIREBASE REALTIME DATABASE SYNC (SUB-SECOND LIVE) =================
+
+// ================= FIREBASE REALTIME DATABASE SYNC (PERMANEN & HARDCODED) =================
+
 function openSyncModal() {
-  document.getElementById("inputGasUrl").value = db.settings.gasUrl || "";
-  document.getElementById("checkAutoSync").checked = db.settings.autoSync !== false;
-  document.getElementById("syncTestStatusBox").classList.add("hidden");
+  const statusBox = document.getElementById("syncTestStatusBox");
+  if (statusBox) statusBox.classList.add("hidden");
   openModal("modalGoogleDriveSync");
 }
 
-function saveSyncSettings() {
-  const url = document.getElementById("inputGasUrl").value.trim();
-  const autoSync = document.getElementById("checkAutoSync").checked;
+/**
+ * Inisialisasi Firebase App & Realtime Listener Permanen
+ */
+function initFirebase(config = PERMANENT_FIREBASE_CONFIG) {
+  if (!window.firebase) {
+    console.warn("Firebase SDK belum selesai dimuat.");
+    return false;
+  }
 
-  db.settings.gasUrl = url;
-  db.settings.autoSync = autoSync;
-  saveDatabaseToLocal(false);
+  try {
+    if (firebase.apps && firebase.apps.length > 0) {
+      try {
+        firebase.app().delete();
+      } catch (e) {}
+    }
 
-  updateSyncUIStatus();
-  closeModal("modalGoogleDriveSync");
-  showToast("Pengaturan sinkronisasi Google Drive berhasil disimpan!", "success");
+    firebaseApp = firebase.initializeApp(config);
+    firebaseDb = firebase.database();
+
+    // Pantau status koneksi socket real-time langsung
+    firebaseDb.ref('.info/connected').on('value', (snap) => {
+      isFirebaseConnected = (snap.val() === true);
+      updateSyncUIStatus();
+    });
+
+    // Pasang listener real-time instan dua arah ke path 'toko_cicilan_baju'
+    const dataRef = firebaseDb.ref('toko_cicilan_baju');
+    dataRef.on('value', (snapshot) => {
+      const cloudData = snapshot.val();
+      if (cloudData) {
+        handleIncomingFirebaseData(cloudData);
+      } else {
+        // Jika di Firebase masih kosong tapi di lokal ada data, otomatis unggah ke Firebase
+        if (db && db.transactions && db.transactions.length > 0) {
+          pushToFirebase(true);
+        }
+      }
+    }, (error) => {
+      console.error("Firebase listen error:", error);
+      isFirebaseConnected = false;
+      updateSyncUIStatus();
+    });
+
+    return true;
+  } catch (err) {
+    console.error("Gagal inisialisasi Firebase:", err);
+    isFirebaseConnected = false;
+    updateSyncUIStatus();
+    return false;
+  }
 }
 
+/**
+ * Menangani data baru yang masuk dari Firebase Realtime (misal dikirim dari HP A ke HP B)
+ */
+function handleIncomingFirebaseData(cloudData) {
+  isRemoteUpdate = true;
+  try {
+    const localPin = (db.settings && db.settings.ownerPin) ? db.settings.ownerPin : "1234";
+
+    db.storeInfo = cloudData.storeInfo || db.storeInfo;
+    if (!db.storeInfo.phone || db.storeInfo.phone === "081234567890") {
+      db.storeInfo.phone = "0895-1361-4415";
+    }
+    db.transactions = Array.isArray(cloudData.transactions) ? cloudData.transactions : [];
+    db.expenses = Array.isArray(cloudData.expenses) ? cloudData.expenses : [];
+    db.lastUpdated = cloudData.lastUpdated || new Date().toISOString();
+
+    if (!db.settings) db.settings = {};
+    db.settings.ownerPin = localPin;
+    db.settings.lastSyncTime = new Date().toISOString();
+
+    // Simpan ke storage lokal tanpa trigger push ulang
+    saveDatabaseToLocal(false);
+
+    refreshAllViews();
+    updateStoreHeaderDisplay();
+    updateSyncUIStatus();
+
+    // Jika sedang di mode customer-portal, segarkan hasil lookup
+    const urlParams = new URLSearchParams(window.location.search);
+    const cekParam = urlParams.get('cek') || document.getElementById('customerSearchQuery')?.value;
+    if (cekParam) {
+      handleCustomerLookup(cekParam);
+    }
+  } catch (err) {
+    console.error("Gagal memproses data Firebase yang masuk:", err);
+  } finally {
+    isRemoteUpdate = false;
+  }
+}
+
+/**
+ * Menyimpan data ke Firebase Realtime Database (Dua Arah Real-Time)
+ */
+async function pushToFirebase(isSilent = false, callback = null) {
+  if (isRemoteUpdate) {
+    if (callback) callback();
+    return;
+  }
+
+  if (!firebaseDb) {
+    if (!isSilent) {
+      showToast("Menghubungkan ke Firebase... Harap tunggu sebentar.", "info");
+    }
+    if (callback) callback();
+    return;
+  }
+
+  isSyncing = true;
+  updateSyncUIStatus();
+
+  try {
+    const dataToSave = {
+      storeInfo: db.storeInfo || {},
+      transactions: db.transactions || [],
+      expenses: db.expenses || [],
+      lastUpdated: new Date().toISOString()
+    };
+
+    await firebaseDb.ref('toko_cicilan_baju').set(dataToSave);
+    db.settings.lastSyncTime = dataToSave.lastUpdated;
+    saveDatabaseToLocal(false);
+
+    if (!isSilent) {
+      showToast("Data berhasil disinkronkan ke Firebase Realtime! ⚡", "success");
+    }
+  } catch (err) {
+    console.error("Gagal simpan ke Firebase:", err);
+    if (!isSilent) {
+      showToast("Gagal menyimpan ke Firebase: " + (err.message || err), "error");
+    }
+  } finally {
+    isSyncing = false;
+    updateSyncUIStatus();
+    if (callback) callback();
+  }
+}
+
+/**
+ * Uji Koneksi Live Firebase
+ */
+async function testFirebaseConnection() {
+  const statusBox = document.getElementById("syncTestStatusBox");
+  if (!statusBox) return;
+
+  statusBox.className = "p-3 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-200";
+  statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1 text-emerald-600"></i> Menguji sinyal ke server Firebase...`;
+  statusBox.classList.remove("hidden");
+
+  try {
+    if (!firebaseDb) {
+      initFirebase(PERMANENT_FIREBASE_CONFIG);
+    }
+
+    const pingRef = firebaseDb.ref('.test_ping');
+    await pingRef.set({ time: Date.now(), test: "ok" });
+    await pingRef.remove();
+
+    statusBox.className = "p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200";
+    statusBox.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> <b>Koneksi Sukses & Real-time Aktif! ⚡</b> Data otomatis sinkron antar HP.`;
+  } catch (err) {
+    statusBox.className = "p-3 rounded-xl text-xs bg-rose-50 text-rose-700 border border-rose-200";
+    statusBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 mr-1"></i> <b>Koneksi Gagal:</b> ${err.message}. Pastikan koneksi internet aktif.`;
+  }
+}
+
+/**
+ * Update Tampilan Badge & Status Koneksi di Header (Otomatis Hijau / Firebase Live)
+ */
 function updateSyncUIStatus() {
   const dot = document.getElementById("syncDot");
   const text = document.getElementById("syncStatusText");
   const btn = document.getElementById("btnSyncStatus");
 
-  if (!db.settings.gasUrl) {
-    if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-slate-400";
-    if (text) text.textContent = "Belum Terhubung Cloud";
-    if (btn) btn.className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200";
-  } else if (isSyncing) {
+  if (isSyncing) {
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping";
-    if (text) text.textContent = "Menyinkronkan...";
-    if (btn) btn.className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700";
+    if (text) text.textContent = "Mengirim...";
+    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700";
+  } else if (isFirebaseConnected) {
+    if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 badge-pulse";
+    if (text) text.textContent = "Firebase Live ⚡";
+    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm";
   } else {
-    if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500";
-    const lastSync = db.settings.lastSyncTime 
-      ? new Date(db.settings.lastSyncTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
-      : "";
-    if (text) text.textContent = lastSync ? `Tersinkron (${lastSync})` : "Cloud Aktif";
-    if (btn) btn.className = "flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100";
+    // Sedang menghubungkan socket ke Firebase (otomatis)
+    if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+    if (text) text.textContent = "Koneksi Firebase...";
+    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
   }
-}
-
-function debouncedAutoSync() {
-  if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
-  autoSyncTimeout = setTimeout(() => {
-    pushToGoogleDrive(true);
-  }, 500); // Sinkronisasi kilat 500ms
 }
 
 function manualSync() {
   const icon = document.getElementById("syncIcon");
   if (icon) icon.classList.add("fa-spin");
-  pushToGoogleDrive(false, () => {
+  pushToFirebase(false, () => {
     if (icon) icon.classList.remove("fa-spin");
   });
-}
-
-/**
- * Mengambil database secara otomatis di latar belakang (Real-time Auto-Sync tanpa popup konfirmasi)
- */
-async function autoFetchFromCloud(isSilent = false) {
-  if (!db.settings.gasUrl || isSyncing) return;
-
-  try {
-    const separator = db.settings.gasUrl.includes("?") ? "&" : "?";
-    const fetchUrl = `${db.settings.gasUrl}${separator}action=read&_t=${Date.now()}`;
-    const response = await fetch(fetchUrl);
-    const result = await response.json();
-
-    if (result.status === "success" && result.data) {
-      const cloudData = result.data;
-      const cloudTime = new Date(cloudData.lastUpdated || 0).getTime();
-      const localTime = new Date(db.lastUpdated || 0).getTime();
-
-      // Jika ada data di cloud dan lebih baru atau lokal masih kosong transaksi
-      const isCloudNewer = cloudTime > localTime;
-      const isLocalEmpty = (db.transactions.length === 0 && Array.isArray(cloudData.transactions) && cloudData.transactions.length > 0);
-
-      if (isCloudNewer || isLocalEmpty) {
-        const currentGasUrl = db.settings.gasUrl;
-        const currentAutoSync = db.settings.autoSync;
-
-        db = cloudData;
-        if (!db.settings) db.settings = {};
-        db.settings.gasUrl = currentGasUrl;
-        db.settings.autoSync = currentAutoSync;
-        db.settings.lastSyncTime = new Date().toISOString();
-
-        saveDatabaseToLocal(false);
-        refreshAllViews();
-        updateStoreHeaderDisplay();
-        updateSyncUIStatus();
-
-        if (!isSilent) {
-          showToast("Data cloud terbaru berhasil dimuat secara otomatis!", "success");
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Gagal auto-fetch dari Google Drive:", err);
-  }
-}
-
-/**
- * Menyalin link aplikasi lengkap beserta URL Google Apps Script untuk dibuka di HP / Akun Lain
- */
-function copyShareableAppLink() {
-  if (!db.settings.gasUrl) {
-    showToast("Harap setel dan simpan URL Web App terlebih dahulu", "error");
-    return;
-  }
-
-  const baseUrl = window.location.href.split('?')[0];
-  const shareUrl = `${baseUrl}?api=${encodeURIComponent(db.settings.gasUrl)}`;
-
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(shareUrl).then(() => {
-      showToast("Link aplikasi berhasil disalin! Buka link ini di HP atau akun lain untuk langsung sinkron.", "success");
-    }).catch(() => {
-      prompt("Salin link ini untuk dibuka di HP atau browser lain:", shareUrl);
-    });
-  } else {
-    prompt("Salin link ini untuk dibuka di HP atau browser lain:", shareUrl);
-  }
-}
-
-/**
- * Mengirim data ke Google Drive melalui Google Apps Script Web App (POST)
- */
-async function pushToGoogleDrive(isSilent = false, callback = null) {
-  if (!db.settings.gasUrl) {
-    if (!isSilent) {
-      showToast("URL Google Apps Script belum disetel. Silakan buka pengaturan Cloud Sync.", "error");
-      openSyncModal();
-    }
-    if (callback) callback();
-    return;
-  }
-
-  isSyncing = true;
-  updateSyncUIStatus();
-
-  try {
-    const payload = {
-      action: "save",
-      data: db
-    };
-
-    // Google Apps Script menangani CORS paling aman jika dikirim sebagai text/plain JSON string
-    const response = await fetch(db.settings.gasUrl, {
-      method: "POST",
-      body: JSON.stringify(payload),
-      headers: {
-        "Content-Type": "text/plain;charset=utf-8"
-      }
-    });
-
-    const result = await response.json();
-
-    if (result.status === "success") {
-      db.settings.lastSyncTime = new Date().toISOString();
-      saveDatabaseToLocal(false);
-      if (!isSilent) showToast("Database berhasil disimpan ke Google Drive!", "success");
-    } else {
-      console.warn("Respon GAS bukan success:", result);
-      if (!isSilent) showToast("Penyimpanan gagal: " + (result.message || "Error tidak diketahui"), "error");
-    }
-  } catch (err) {
-    console.error("Gagal sync ke Google Drive:", err);
-    if (!isSilent) showToast("Koneksi ke Google Drive gagal. Pastikan URL benar dan memiliki akses Anyone.", "error");
-  } finally {
-    isSyncing = false;
-    updateSyncUIStatus();
-    if (callback) callback();
-  }
-}
-
-/**
- * Mengambil database dari file database_keuangan.json di Google Drive (GET)
- */
-async function pullFromGoogleDrive() {
-  if (!db.settings.gasUrl) {
-    showToast("URL Google Apps Script belum disetel.", "error");
-    return;
-  }
-
-  if (!confirm("PERINGATAN: Memuat dari Google Drive akan menimpa data di browser dengan data di Cloud Google Drive Anda. Lanjutkan?")) {
-    return;
-  }
-
-  isSyncing = true;
-  updateSyncUIStatus();
-
-  try {
-    const separator = db.settings.gasUrl.includes("?") ? "&" : "?";
-    const fetchUrl = `${db.settings.gasUrl}${separator}action=read&_t=${Date.now()}`;
-    const response = await fetch(fetchUrl);
-    const result = await response.json();
-
-    if (result.status === "success" && result.data) {
-      const cloudData = result.data;
-      if (cloudData.transactions || cloudData.expenses) {
-        db = cloudData;
-        db.settings.lastSyncTime = new Date().toISOString();
-        saveDatabaseToLocal(false);
-        refreshAllViews();
-        showToast("Data dari Google Drive berhasil dimuat!", "success");
-      } else {
-        showToast("Data di Google Drive masih kosong.", "info");
-      }
-    } else {
-      showToast("Gagal membaca Google Drive: " + (result.message || "Data kosong"), "error");
-    }
-  } catch (err) {
-    console.error("Gagal muat dari Google Drive:", err);
-    showToast("Koneksi gagal saat membaca Google Drive", "error");
-  } finally {
-    isSyncing = false;
-    updateSyncUIStatus();
-  }
-}
-
-/**
- * Uji Coba Koneksi ke Google Apps Script (Ping)
- */
-async function testGasConnection() {
-  const url = document.getElementById("inputGasUrl").value.trim();
-  const statusBox = document.getElementById("syncTestStatusBox");
-  if (!url) {
-    statusBox.className = "p-3 rounded-xl text-xs bg-rose-50 text-rose-700 border border-rose-200";
-    statusBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation mr-1"></i> Masukkan URL Web App terlebih dahulu!`;
-    statusBox.classList.remove("hidden");
-    return;
-  }
-
-  statusBox.className = "p-3 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-200";
-  statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sedang menguji koneksi ke Google Apps Script...`;
-  statusBox.classList.remove("hidden");
-
-  try {
-    const separator = url.includes("?") ? "&" : "?";
-    const pingUrl = `${url}${separator}action=ping&_t=${Date.now()}`;
-    const res = await fetch(pingUrl);
-    const data = await res.json();
-
-    if (data.status === "success") {
-      statusBox.className = "p-3 rounded-xl text-xs bg-emerald-50 text-emerald-800 border border-emerald-200";
-      statusBox.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i> <b>Koneksi Sukses!</b> ${data.message}`;
-    } else {
-      statusBox.className = "p-3 rounded-xl text-xs bg-rose-50 text-rose-700 border border-rose-200";
-      statusBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 mr-1"></i> Gagal: ${data.message || "Respon salah"}`;
-    }
-  } catch (e) {
-    statusBox.className = "p-3 rounded-xl text-xs bg-rose-50 text-rose-700 border border-rose-200";
-    statusBox.innerHTML = `<i class="fa-solid fa-circle-xmark text-rose-600 mr-1"></i> <b>Koneksi Terhambat!</b> Pastikan hak akses Web App disetel ke <b>"Anyone"</b> (Siapa saja) saat melakukan deployment di Google Apps Script.`;
-  }
 }
 
 // ================= PENGATURAN UMUM & BACKUP / RESTORE JSON =================
 function openSettingsModal() {
   document.getElementById("settingStoreName").value = db.storeInfo.name || "";
   document.getElementById("settingOwnerName").value = db.storeInfo.owner || "";
+  document.getElementById("settingStorePhone").value = db.storeInfo.phone || "0895-1361-4415";
   document.getElementById("settingRekening").value = db.storeInfo.rekening || "";
-  document.getElementById("settingOwnerPin").value = (db.settings && db.settings.ownerPin) ? db.settings.ownerPin : "1234";
+  document.getElementById("settingOwnerPin").value = (db.settings && db.settings.ownerPin) ? db.settings.ownerPin : "";
   openModal("modalGeneralSettings");
 }
 
 function saveGeneralSettings() {
-  db.storeInfo.name = document.getElementById("settingStoreName").value.trim() || "Toko Baju Berkah";
+  db.storeInfo.name = document.getElementById("settingStoreName").value.trim() || "SADIL OLSHOP";
   db.storeInfo.owner = document.getElementById("settingOwnerName").value.trim();
+  db.storeInfo.phone = document.getElementById("settingStorePhone").value.trim() || "0895-1361-4415";
   db.storeInfo.rekening = document.getElementById("settingRekening").value.trim();
 
   const newPin = document.getElementById("settingOwnerPin").value.trim();
@@ -1934,7 +1868,7 @@ function handleCustomerLookup(query = null) {
     }
 
     const rekening = db.storeInfo.rekening || "Hubungi admin toko untuk nomor rekening";
-    const storePhone = (db.storeInfo.phone || "").replace(/[^\d]/g, '');
+    const storePhone = formatWaPhoneNumber(db.storeInfo.phone || "0895-1361-4415");
 
     return `
       <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-5">
