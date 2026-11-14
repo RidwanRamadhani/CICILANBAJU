@@ -2186,3 +2186,32 @@ document.addEventListener("keydown", (e) => {
     modals.forEach(m => closeModal(m));
   }
 });
+
+// ================= AUTO PURGE FLOATING NETLIFY BADGE =================
+function purgeNetlifyBadge() {
+  try {
+    document.querySelectorAll('a, div, iframe').forEach(el => {
+      const href = el.getAttribute ? (el.getAttribute('href') || '') : '';
+      const text = el.textContent || '';
+      const id = el.id || '';
+      const className = el.className ? el.className.toString() : '';
+
+      if (
+        (href && href.includes('netlify.com')) ||
+        (text && text.includes('Powered by Netlify')) ||
+        (id && id.toLowerCase().includes('netlify')) ||
+        (className && className.toLowerCase().includes('netlify-badge'))
+      ) {
+        el.style.setProperty('display', 'none', 'important');
+        el.style.setProperty('visibility', 'hidden', 'important');
+        el.style.setProperty('opacity', '0', 'important');
+        el.style.setProperty('pointer-events', 'none', 'important');
+      }
+    });
+  } catch (e) {}
+}
+
+// Pantau dan hapus otomatis badge yang diinjeksikan secara dinamis
+setInterval(purgeNetlifyBadge, 500);
+document.addEventListener("DOMContentLoaded", purgeNetlifyBadge);
+window.addEventListener("load", purgeNetlifyBadge);

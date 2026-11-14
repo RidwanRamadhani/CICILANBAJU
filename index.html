@@ -79,6 +79,20 @@
       0%, 100% { opacity: 1; }
       50% { opacity: .6; }
     }
+
+    /* Sembunyikan badge & floating widget Netlify agar tidak menghalangi tombol navigasi */
+    a[href*="netlify.com"],
+    iframe[src*="netlify"],
+    iframe#netlify-drawer,
+    div[class*="netlify-badge"],
+    [data-netlify-deploy-id],
+    #netlify-badge,
+    .netlify-badge {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans w-full overflow-x-hidden">
@@ -813,7 +827,7 @@
   </main>
 
   <!-- ================= MOBILE BOTTOM NAVIGATION (KHUSUS PEMILIK TOKO) ================= -->
-  <div id="mobileOwnerNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-30 shadow-lg px-2 py-1.5 flex justify-around">
+  <div id="mobileOwnerNav" class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-40 shadow-lg px-2 py-1.5 flex justify-around">
     <button onclick="switchTab('dashboard')" id="mob-dashboard" class="mobile-nav-btn flex flex-col items-center py-1 px-2 text-brand-600 text-[10px] font-bold">
       <i class="fa-solid fa-chart-pie text-base mb-0.5"></i>
       <span>Beranda</span>
