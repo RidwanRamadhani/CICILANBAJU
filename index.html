@@ -49,6 +49,14 @@
   </script>
 
   <style>
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden !important;
+      position: relative;
+    }
+    * {
+      box-sizing: border-box;
+    }
     /* Custom scrollbar styling */
     ::-webkit-scrollbar {
       width: 6px;
@@ -73,55 +81,55 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans">
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col font-sans w-full overflow-x-hidden">
 
   <!-- ================= TOP HEADER NAVIGATION ================= -->
-  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-16">
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm w-full overflow-x-hidden">
+    <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-2">
         
         <!-- Brand Logo & Title -->
-        <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('dashboard')">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
-            <i class="fa-solid fa-shirt text-lg"></i>
+        <div class="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 shrink" onclick="switchTab('dashboard')">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20 shrink-0">
+            <i class="fa-solid fa-shirt text-base sm:text-lg"></i>
           </div>
-          <div>
-            <h1 class="font-bold text-lg leading-tight text-slate-900 flex items-center gap-1.5">
-              <span>Keuangan Baju</span>
-              <span class="text-[10px] font-bold uppercase tracking-wider bg-brand-100 text-brand-700 px-2 py-0.5 rounded-full border border-brand-200">Cash & Tempo</span>
+          <div class="min-w-0">
+            <h1 class="font-bold text-sm sm:text-lg leading-tight text-slate-900 flex items-center gap-1.5 truncate">
+              <span class="truncate">Keuangan Baju</span>
+              <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-brand-100 text-brand-700 px-1.5 py-0.5 rounded-full border border-brand-200 hidden min-[400px]:inline">Cash & Tempo</span>
             </h1>
-            <p class="text-xs text-slate-500 hidden sm:block">Pencatatan Penjualan & Tagihan Realtime (Firebase)</p>
+            <p class="text-[11px] text-slate-500 hidden sm:block truncate">Pencatatan Penjualan & Tagihan Realtime (Firebase)</p>
           </div>
         </div>
 
         <!-- Sync Indicator & Quick Settings Actions -->
-        <div class="flex items-center space-x-2 sm:space-x-3">
+        <div class="flex items-center space-x-1 sm:space-x-2 shrink-0">
           
           <!-- Tombol Status Login Pemilik Toko / Kunci Akses -->
-          <button id="btnRoleToggle" onclick="toggleOwnerAuthModal()" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100">
-            <i id="roleToggleIcon" class="fa-solid fa-lock text-amber-600"></i>
-            <span id="roleToggleText">Masuk Pemilik Toko</span>
+          <button id="btnRoleToggle" onclick="toggleOwnerAuthModal()" class="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0">
+            <i id="roleToggleIcon" class="fa-solid fa-lock text-amber-600 text-xs"></i>
+            <span id="roleToggleText" class="hidden min-[380px]:inline text-xs">Masuk Pemilik</span>
           </button>
 
-          <!-- Firebase Realtime Sync Badge & Status Button (Khusus Pemilik Toko) -->
-          <button id="btnSyncStatus" onclick="openSyncModal()" title="Pengaturan Database Firebase Realtime (Multi-HP)" class="owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200">
+          <!-- Firebase Realtime Sync Badge & Status Button (Khusus Pemilik Toko - Desktop/Tablet) -->
+          <button id="btnSyncStatus" onclick="openSyncModal()" title="Pengaturan Database Firebase Realtime (Multi-HP)" class="owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-slate-100 border-slate-200 text-slate-600 hover:bg-slate-200 shrink-0">
             <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-            <span id="syncStatusText" class="hidden md:inline">Belum Terhubung Firebase</span>
+            <span id="syncStatusText" class="hidden lg:inline">Belum Terhubung Firebase</span>
             <i class="fa-solid fa-fire text-amber-500 ml-1"></i>
           </button>
 
           <!-- Manual Sync / Push Button (Khusus Pemilik Toko) -->
-          <button id="btnManualSync" onclick="manualSync()" title="Kirim/Perbarui Data ke Firebase Realtime" class="owner-only-element p-2 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg border border-slate-200 transition">
-            <i id="syncIcon" class="fa-solid fa-rotate"></i>
+          <button id="btnManualSync" onclick="manualSync()" title="Kirim/Perbarui Data ke Firebase Realtime" class="owner-only-element p-2 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded-lg border border-slate-200 transition shrink-0">
+            <i id="syncIcon" class="fa-solid fa-rotate text-xs sm:text-sm"></i>
           </button>
 
           <!-- Store Info & Settings Button (Khusus Pemilik Toko) -->
-          <button id="btnSettings" onclick="openSettingsModal()" title="Pengaturan & Backup" class="owner-only-element p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 transition">
-            <i class="fa-solid fa-gear"></i>
+          <button id="btnSettings" onclick="openSettingsModal()" title="Pengaturan & Backup" class="owner-only-element p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg border border-slate-200 transition shrink-0">
+            <i class="fa-solid fa-gear text-xs sm:text-sm"></i>
           </button>
 
-          <!-- Action: Tambah Transaksi Cepat (Khusus Pemilik Toko) -->
-          <button id="btnNewTxHeader" onclick="switchTab('new-transaction')" class="owner-only-element hidden sm:flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-brand-600/30 transition">
+          <!-- Action: Tambah Transaksi Cepat (Khusus Pemilik Toko - Desktop/Tablet) -->
+          <button id="btnNewTxHeader" onclick="switchTab('new-transaction')" class="owner-only-element hidden sm:flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-brand-600/30 transition shrink-0">
             <i class="fa-solid fa-plus"></i>
             <span>Transaksi Baru</span>
           </button>
@@ -129,42 +137,42 @@
         </div>
       </div>
 
-      <!-- Desktop Navigation Tabs (Hanya Tampil Jika Pemilik Toko Login) -->
-      <nav id="desktopOwnerNav" class="hidden space-x-1 border-t border-slate-100 py-1">
-        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab px-4 py-2 text-sm font-semibold rounded-lg text-brand-700 bg-brand-50 flex items-center space-x-2 transition">
+      <!-- Desktop Navigation Tabs (Hanya Tampil di Tablet & Desktop Jika Pemilik Toko Login) -->
+      <nav id="desktopOwnerNav" class="hidden md:flex space-x-1 border-t border-slate-100 py-1 overflow-x-auto">
+        <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg text-brand-700 bg-brand-50 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-chart-pie text-brand-600"></i>
           <span>Dashboard</span>
         </button>
-        <button onclick="switchTab('installments')" id="tab-installments" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+        <button onclick="switchTab('installments')" id="tab-installments" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-calendar-check text-slate-500"></i>
           <span>Manajemen Cicilan</span>
           <span id="badgeDueCount" class="hidden ml-1 px-1.5 py-0.5 text-[11px] font-bold rounded-full bg-amber-100 text-amber-700">0</span>
         </button>
-        <button onclick="switchTab('new-transaction')" id="tab-new-transaction" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+        <button onclick="switchTab('new-transaction')" id="tab-new-transaction" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-cart-plus text-slate-500"></i>
           <span>Input Transaksi</span>
         </button>
-        <button onclick="switchTab('transactions')" id="tab-transactions" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+        <button onclick="switchTab('transactions')" id="tab-transactions" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-receipt text-slate-500"></i>
           <span>Riwayat Penjualan</span>
         </button>
-        <button onclick="switchTab('expenses')" id="tab-expenses" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+        <button onclick="switchTab('expenses')" id="tab-expenses" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-wallet text-slate-500"></i>
           <span>Pengeluaran / Modal</span>
         </button>
-        <button onclick="switchTab('customer-portal')" id="tab-customer-portal" class="nav-tab px-4 py-2 text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition">
+        <button onclick="switchTab('customer-portal')" id="tab-customer-portal" class="nav-tab px-3.5 py-2 text-xs sm:text-sm font-medium rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center space-x-2 transition whitespace-nowrap">
           <i class="fa-solid fa-eye text-slate-500"></i>
           <span>Preview Portal Pembeli</span>
         </button>
       </nav>
 
       <!-- Banner Navigasi Khusus Pembeli -->
-      <div id="customerPortalBanner" class="py-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+      <div id="customerPortalBanner" class="py-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs text-slate-600">
         <span class="font-semibold text-slate-700 flex items-center gap-1.5">
           <i class="fa-solid fa-shield-halved text-emerald-600"></i>
           <span>Portal Pelanggan (Mode Hanya Lihat / Read-Only)</span>
         </span>
-        <span class="text-slate-400">Pembeli tidak memiliki akses mengedit tagihan</span>
+        <span class="text-slate-400 text-[11px]">Pembeli tidak memiliki akses mengedit tagihan</span>
       </div>
     </div>
   </header>
@@ -897,8 +905,8 @@
             <span id="modalProgressText" class="text-xs text-slate-500 font-medium">3 dari 8 Terbayar</span>
           </div>
 
-          <div class="border border-slate-200 rounded-xl overflow-hidden">
-            <table class="w-full text-left text-xs">
+          <div class="border border-slate-200 rounded-xl overflow-x-auto">
+            <table class="w-full text-left text-xs min-w-[420px]">
               <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                 <tr>
                   <th class="py-2.5 px-3">Ke</th>

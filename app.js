@@ -184,26 +184,32 @@ function updateRoleUI() {
   const ownerElements = document.querySelectorAll(".owner-only-element");
 
   if (isOwnerLoggedIn) {
-    if (toggleText) toggleText.textContent = "Pemilik Toko (Kunci)";
+    if (toggleText) toggleText.textContent = "Pemilik (Kunci)";
     if (toggleIcon) toggleIcon.className = "fa-solid fa-lock-open text-emerald-600";
-    if (btnToggle) btnToggle.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100";
+    if (btnToggle) btnToggle.className = "flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100 shrink-0";
     
     if (desktopNav) {
-      desktopNav.classList.remove("hidden");
-      desktopNav.classList.add("flex");
+      desktopNav.className = "hidden md:flex space-x-1 border-t border-slate-100 py-1 overflow-x-auto";
     }
     if (mobileNav) mobileNav.classList.remove("hidden");
     if (customerBanner) customerBanner.classList.add("hidden");
 
-    ownerElements.forEach(el => el.classList.remove("hidden"));
+    ownerElements.forEach(el => {
+      el.classList.remove("hidden");
+      // Pertahankan aturan tampilan khusus desktop/tablet agar tidak meluber di HP Android
+      if (el.id === "btnNewTxHeader") {
+        el.className = "owner-only-element hidden sm:flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-brand-600/30 transition shrink-0";
+      } else if (el.id === "btnSyncStatus") {
+        el.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm shrink-0";
+      }
+    });
   } else {
-    if (toggleText) toggleText.textContent = "Masuk Pemilik Toko";
+    if (toggleText) toggleText.textContent = "Masuk Pemilik";
     if (toggleIcon) toggleIcon.className = "fa-solid fa-lock text-amber-600";
-    if (btnToggle) btnToggle.className = "flex items-center space-x-1.5 px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100";
+    if (btnToggle) btnToggle.className = "flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-bold border transition shadow-sm bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0";
 
     if (desktopNav) {
-      desktopNav.classList.add("hidden");
-      desktopNav.classList.remove("flex");
+      desktopNav.className = "hidden space-x-1 border-t border-slate-100 py-1";
     }
     if (mobileNav) mobileNav.classList.add("hidden");
     if (customerBanner) customerBanner.classList.remove("hidden");
@@ -1751,16 +1757,16 @@ function updateSyncUIStatus() {
   if (isSyncing) {
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping";
     if (text) text.textContent = "Mengirim...";
-    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700";
+    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700";
   } else if (isFirebaseConnected) {
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 badge-pulse";
     if (text) text.textContent = "Firebase Live ⚡";
-    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm";
+    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm";
   } else {
     // Sedang menghubungkan socket ke Firebase (otomatis)
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
     if (text) text.textContent = "Koneksi Firebase...";
-    if (btn) btn.className = "owner-only-element hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
+    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
   }
 }
 
@@ -1912,8 +1918,8 @@ function handleCustomerLookup(query = null) {
           <!-- Tabel Jadwal Angsuran (100% READ ONLY - Pembeli tidak bisa edit) -->
           <div>
             <h4 class="font-bold text-xs uppercase tracking-wider text-slate-800 mb-2">Jadwal & Riwayat Angsuran Terverifikasi:</h4>
-            <div class="border border-slate-200 rounded-xl overflow-hidden">
-              <table class="w-full text-left text-xs">
+            <div class="border border-slate-200 rounded-xl overflow-x-auto">
+              <table class="w-full text-left text-xs min-w-[340px]">
                 <thead class="bg-slate-50 text-slate-700 font-semibold border-b border-slate-200">
                   <tr>
                     <th class="py-2.5 px-3">Ke</th>
