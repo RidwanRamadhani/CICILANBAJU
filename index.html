@@ -105,7 +105,7 @@
         
         <!-- Brand Logo & Title -->
         <div class="flex items-center space-x-2 sm:space-x-3 cursor-pointer min-w-0 shrink" onclick="switchTab('dashboard')">
-          <img src="logo.jpg" alt="Logo Saniyah Adilah" class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-contain bg-white border border-slate-200 shadow-sm shrink-0 p-0.5">
+          <img src="logo.jpg" alt="Logo Saniyah Adilah" onclick="event.stopPropagation(); openModal('modalLogoPreview');" title="Klik untuk memperbesar logo" class="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-contain bg-white border border-slate-200 shadow-sm shrink-0 p-0.5 hover:scale-105 active:scale-95 transition cursor-zoom-in">
           <div class="min-w-0">
             <h1 class="font-bold text-sm sm:text-lg leading-tight text-slate-900 flex items-center gap-1.5 truncate">
               <span class="truncate">Keuangan Baju</span>
@@ -1318,6 +1318,28 @@
         </div>
       </form>
 
+    </div>
+  </div>
+
+  <!-- MODAL 7: ZOOM PREVIEW LOGO RESMI TOKO -->
+  <div id="modalLogoPreview" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4" onclick="closeModal('modalLogoPreview')">
+    <div class="relative max-w-sm sm:max-w-md w-full bg-white rounded-3xl p-5 shadow-2xl flex flex-col items-center animate-in fade-in zoom-in-95 duration-200" onclick="event.stopPropagation()">
+      <button onclick="closeModal('modalLogoPreview')" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center text-sm transition">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+      
+      <div class="w-full flex items-center justify-center py-2 px-1">
+        <img src="logo.jpg" alt="Logo Saniyah Adilah Detail" class="w-full max-h-[60vh] object-contain rounded-2xl">
+      </div>
+
+      <div class="text-center mt-2">
+        <h3 class="font-bold text-slate-900 text-base">Saniyah Adilah</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Pencatatan Penjualan & Tagihan Cicilan Busana</p>
+      </div>
+
+      <button onclick="closeModal('modalLogoPreview')" class="mt-4 px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold shadow-sm transition">
+        Tutup
+      </button>
     </div>
   </div>
 

@@ -2180,7 +2180,9 @@ document.addEventListener("keydown", (e) => {
       "modalPayInstallment", 
       "modalGoogleDriveSync", 
       "modalGeneralSettings",
-      "modalPrintReceipt"
+      "modalPrintReceipt",
+      "modalOwnerLogin",
+      "modalLogoPreview"
     ];
     modals.forEach(m => closeModal(m));
   }
