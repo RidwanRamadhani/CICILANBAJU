@@ -200,7 +200,7 @@ function updateRoleUI() {
       if (el.id === "btnNewTxHeader") {
         el.className = "owner-only-element hidden sm:flex items-center space-x-2 bg-brand-600 hover:bg-brand-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold shadow-sm shadow-brand-600/30 transition shrink-0";
       } else if (el.id === "btnSyncStatus") {
-        el.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm shrink-0";
+        el.className = "owner-only-element hidden items-center space-x-2 shrink-0";
       }
     });
   } else {
@@ -1682,7 +1682,7 @@ async function pushToFirebase(isSilent = false, callback = null) {
 
   if (!firebaseDb) {
     if (!isSilent) {
-      showToast("Menghubungkan ke Firebase... Harap tunggu sebentar.", "info");
+      showToast("Menghubungkan ke server cloud... Harap tunggu sebentar.", "info");
     }
     if (callback) callback();
     return;
@@ -1704,12 +1704,12 @@ async function pushToFirebase(isSilent = false, callback = null) {
     saveDatabaseToLocal(false);
 
     if (!isSilent) {
-      showToast("Data berhasil disinkronkan ke Firebase Realtime! ⚡", "success");
+      showToast("Data berhasil disinkronkan secara realtime! ⚡", "success");
     }
   } catch (err) {
     console.error("Gagal simpan ke Firebase:", err);
     if (!isSilent) {
-      showToast("Gagal menyimpan ke Firebase: " + (err.message || err), "error");
+      showToast("Gagal menyinkronkan data: " + (err.message || err), "error");
     }
   } finally {
     isSyncing = false;
@@ -1719,14 +1719,14 @@ async function pushToFirebase(isSilent = false, callback = null) {
 }
 
 /**
- * Uji Koneksi Live Firebase
+ * Uji Koneksi Live Realtime
  */
 async function testFirebaseConnection() {
   const statusBox = document.getElementById("syncTestStatusBox");
   if (!statusBox) return;
 
   statusBox.className = "p-3 rounded-xl text-xs bg-slate-100 text-slate-700 border border-slate-200";
-  statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1 text-emerald-600"></i> Menguji sinyal ke server Firebase...`;
+  statusBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1 text-emerald-600"></i> Menguji sinyal ke server cloud...`;
   statusBox.classList.remove("hidden");
 
   try {
@@ -1747,7 +1747,7 @@ async function testFirebaseConnection() {
 }
 
 /**
- * Update Tampilan Badge & Status Koneksi di Header (Otomatis Hijau / Firebase Live)
+ * Update Status Koneksi di Latar Belakang (Tetap Realtime Tanpa Mengganggu UI)
  */
 function updateSyncUIStatus() {
   const dot = document.getElementById("syncDot");
@@ -1756,17 +1756,16 @@ function updateSyncUIStatus() {
 
   if (isSyncing) {
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping";
-    if (text) text.textContent = "Mengirim...";
-    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700";
+    if (text) text.textContent = "Menyimpan...";
+    if (btn) btn.className = "owner-only-element hidden items-center space-x-2";
   } else if (isFirebaseConnected) {
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 badge-pulse";
-    if (text) text.textContent = "Firebase Live ⚡";
-    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-emerald-50 border-emerald-200 text-emerald-800 hover:bg-emerald-100 shadow-sm";
+    if (text) text.textContent = "Online Realtime";
+    if (btn) btn.className = "owner-only-element hidden items-center space-x-2";
   } else {
-    // Sedang menghubungkan socket ke Firebase (otomatis)
     if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
-    if (text) text.textContent = "Koneksi Firebase...";
-    if (btn) btn.className = "owner-only-element hidden md:flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100";
+    if (text) text.textContent = "Menghubungkan...";
+    if (btn) btn.className = "owner-only-element hidden items-center space-x-2";
   }
 }
 
